@@ -3,9 +3,10 @@ package ses_test
 import (
 	"context"
 	"errors"
-	awsSes "flip/aws-sdk-go/aws/ses"
-	servicesSes "flip/aws-sdk-go/services/ses"
 	"testing"
+
+	awsSes "github.com/flip-id/aws-sdk-go/aws/ses"
+	servicesSes "github.com/flip-id/aws-sdk-go/services/ses"
 
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	gomock "github.com/golang/mock/gomock"

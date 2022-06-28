@@ -1,4 +1,4 @@
-module flip/aws-sdk-go
+module github.com/flip-id/aws-sdk-go
 
 go 1.17
 

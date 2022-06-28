@@ -17,8 +17,8 @@ package main
 
 import (
 	"context"
-	"flip/aws-sdk-go/client"
-	"flip/aws-sdk-go/services/ses"
+	"github.com/flip-id/aws-sdk-go/client"
+	"github.com/flip-id/aws-sdk-go/services/ses"
 	"fmt"
 )
 
@@ -42,5 +42,4 @@ func main() {
 
 	fmt.Println(messageID)
 }
-
 ```

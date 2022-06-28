@@ -2,8 +2,9 @@ package ses
 
 import (
 	"context"
-	awsses "flip/aws-sdk-go/aws/ses"
-	"flip/aws-sdk-go/client"
+
+	awsses "github.com/flip-id/aws-sdk-go/aws/ses"
+	"github.com/flip-id/aws-sdk-go/client"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ses"

@@ -2,9 +2,10 @@ package ses_test
 
 import (
 	"context"
-	"flip/aws-sdk-go/client"
-	"flip/aws-sdk-go/services/ses"
 	"testing"
+
+	"github.com/flip-id/aws-sdk-go/client"
+	"github.com/flip-id/aws-sdk-go/services/ses"
 
 	"github.com/stretchr/testify/assert"
 )
