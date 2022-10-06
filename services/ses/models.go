@@ -1,5 +1,7 @@
 package ses
 
+import "io"
+
 type TypeEmail string
 
 const (
@@ -17,4 +19,17 @@ type RequestSendEmail struct {
 	Subject string   `validate:"required"`
 	Body    string   `validate:"required"`
 	Type    TypeEmail
+}
+
+// RequestSendRawEmail is a request to send raw email.
+type RequestSendRawEmail struct {
+	RequestSendEmail
+	AttachmentPaths   []string
+	AttachmentReaders []AttachmentReader
+}
+
+// AttachmentReader is an attachment with the io.Reader and name of file.
+type AttachmentReader struct {
+	Name   string
+	Reader io.Reader
 }

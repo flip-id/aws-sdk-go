@@ -2,6 +2,7 @@ package ses
 
 import (
 	"context"
+	"github.com/go-playground/validator"
 
 	awsses "github.com/flip-id/aws-sdk-go/aws/ses"
 	"github.com/flip-id/aws-sdk-go/client"
@@ -12,10 +13,12 @@ import (
 
 type ServiceInterface interface {
 	SendEmail(ctx context.Context, request RequestSendEmail) (string, error)
+	SendRawEmail(ctx context.Context, request RequestSendRawEmail) (string, error)
 }
 
 type Service struct {
 	SESService awsses.SESServiceInterface
+	validate   *validator.Validate
 }
 
 func New(ctx context.Context, region client.Region, options ...func(*ses.Options)) (ServiceInterface, error) {
@@ -26,5 +29,5 @@ func New(ctx context.Context, region client.Region, options ...func(*ses.Options
 	}
 
 	sesClient := ses.NewFromConfig(clientConfig.Config, options...)
-	return &Service{SESService: awsses.NewSES(sesClient)}, nil
+	return &Service{SESService: awsses.NewSES(sesClient), validate: validator.New()}, nil
 }

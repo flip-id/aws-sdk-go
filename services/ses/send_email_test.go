@@ -1,12 +1,16 @@
-package ses_test
+package ses
 
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/go-playground/validator"
+	"os"
+	"strings"
 	"testing"
 
 	awsSes "github.com/flip-id/aws-sdk-go/aws/ses"
-	servicesSes "github.com/flip-id/aws-sdk-go/services/ses"
 
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	gomock "github.com/golang/mock/gomock"
@@ -26,18 +30,18 @@ func TestSendEmail(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		arguments servicesSes.RequestSendEmail
+		arguments RequestSendEmail
 		mockings  mocking
 		wantError bool
 	}{
 		{
 			name: "success send email with text type",
-			arguments: servicesSes.RequestSendEmail{
+			arguments: RequestSendEmail{
 				To:      []string{"your_email@gmail.com"},
 				From:    "your_email@gmail.com",
 				Subject: "Testing Email",
 				Body:    "This is Body of Email",
-				Type:    servicesSes.TEXTTypeEmail,
+				Type:    TEXTTypeEmail,
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
@@ -50,12 +54,12 @@ func TestSendEmail(t *testing.T) {
 		},
 		{
 			name: "success send email with html type",
-			arguments: servicesSes.RequestSendEmail{
+			arguments: RequestSendEmail{
 				To:      []string{"your_email@gmail.com"},
 				From:    "your_email@gmail.com",
 				Subject: "Testing Email",
 				Body:    "<h1>Hello world</h1>",
-				Type:    servicesSes.HTMLTypeEmail,
+				Type:    HTMLTypeEmail,
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
@@ -68,12 +72,12 @@ func TestSendEmail(t *testing.T) {
 		},
 		{
 			name: "error send email because invalid payload",
-			arguments: servicesSes.RequestSendEmail{
+			arguments: RequestSendEmail{
 				To:      []string{},
 				From:    "your_email@gmail.com",
 				Subject: "Testing Email",
 				Body:    "<h1>Hello world</h1>",
-				Type:    servicesSes.HTMLTypeEmail,
+				Type:    HTMLTypeEmail,
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
@@ -86,12 +90,12 @@ func TestSendEmail(t *testing.T) {
 		},
 		{
 			name: "error send email because error when send email with ses service",
-			arguments: servicesSes.RequestSendEmail{
+			arguments: RequestSendEmail{
 				To:      []string{"your_email@gmail.com"},
 				From:    "your_email@gmail.com",
 				Subject: "Testing Email",
 				Body:    "<h1>Hello world</h1>",
-				Type:    servicesSes.HTMLTypeEmail,
+				Type:    HTMLTypeEmail,
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
@@ -112,8 +116,9 @@ func TestSendEmail(t *testing.T) {
 			mockingSESService.EXPECT().SendEmail(gomock.Any(), gomock.Any()).Return(
 				tc.mockings.sendEmail["response"], tc.mockings.sendEmail["error"]).Times(tc.mockings.sendEmail["times"].(int))
 
-			sesService := servicesSes.Service{
+			sesService := Service{
 				SESService: mockingSESService,
+				validate:   validator.New(),
 			}
 
 			result, err := sesService.SendEmail(context.TODO(), tc.arguments)
@@ -128,4 +133,162 @@ func TestSendEmail(t *testing.T) {
 		})
 	}
 
+}
+
+func TestService_SendRawEmail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	type fields struct {
+		SESService awsSes.SESServiceInterface
+		validate   *validator.Validate
+	}
+	type args struct {
+		ctx     context.Context
+		request RequestSendRawEmail
+	}
+	tests := []struct {
+		name    string
+		fields  func() fields
+		args    func() args
+		want    string
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "no destination",
+			fields: func() fields {
+				return fields{
+					SESService: awsSes.NewMockSESServiceInterface(ctrl),
+					validate:   validator.New(),
+				}
+			},
+			args: func() args {
+				return args{
+					ctx:     context.TODO(),
+					request: RequestSendRawEmail{},
+				}
+			},
+			want:    "",
+			wantErr: assert.Error,
+		},
+		{
+			name: "error sending text email",
+			fields: func() fields {
+				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
+				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("error sending text email"))
+				return fields{
+					SESService: mockSESService,
+					validate:   validator.New(),
+				}
+			},
+			args: func() args {
+				return args{
+					ctx: context.TODO(),
+					request: RequestSendRawEmail{
+						RequestSendEmail: RequestSendEmail{
+							To:      []string{"hello@test.id"},
+							From:    "no-reply@test.id",
+							Subject: "Test",
+							Body:    "Test",
+							Type:    TEXTTypeEmail,
+						},
+					},
+				}
+			},
+			want:    "",
+			wantErr: assert.Error,
+		},
+		{
+			name: "error sending html email",
+			fields: func() fields {
+				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
+				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("error sending html email"))
+				return fields{
+					SESService: mockSESService,
+					validate:   validator.New(),
+				}
+			},
+			args: func() args {
+				return args{
+					ctx: context.TODO(),
+					request: RequestSendRawEmail{
+						RequestSendEmail: RequestSendEmail{
+							To:      []string{"hello@test.id"},
+							From:    "no-reply@test.id",
+							Subject: "Test",
+							Body:    "Test",
+							Type:    HTMLTypeEmail,
+						},
+					},
+				}
+			},
+			want:    "",
+			wantErr: assert.Error,
+		},
+		{
+			name: "success sending text email with attachments",
+			fields: func() fields {
+				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
+				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
+					Return(&ses.SendRawEmailOutput{
+					MessageId: aws.String("5123"),
+				}, nil)
+				return fields{
+					SESService: mockSESService,
+					validate:   validator.New(),
+				}
+			},
+			args: func() args {
+				filePathTest := "./attachment.txt"
+				if _, err := os.Stat(filePathTest); errors.Is(err, os.ErrNotExist) {
+					filePathTest = "./services/ses/attachment.txt"
+					_, err := os.Stat(filePathTest)
+					if err != nil {
+						t.Errorf("Error checking file attachment.txt for testing: %v", err)
+					}
+				}
+				buff := strings.NewReader(`hello world!`)
+				return args{
+					ctx: context.TODO(),
+					request: RequestSendRawEmail{
+						RequestSendEmail: RequestSendEmail{
+							To:      []string{"hello@test.id"},
+							Cc:      []string{"hello-cc@test.id"},
+							Bcc:     []string{"hello-bcc@test.id"},
+							From:    "no-reply@test.id",
+							Subject: "Test",
+							Body:    "Test",
+							Type:    TEXTTypeEmail,
+						},
+						AttachmentPaths: []string{filePathTest},
+						AttachmentReaders: []AttachmentReader{
+							{
+								Name:   "attachment-world.txt",
+								Reader: buff,
+							},
+						},
+					},
+				}
+			},
+			want:    "5123",
+			wantErr: assert.NoError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fields := tt.fields()
+			s := &Service{
+				SESService: fields.SESService,
+				validate:   fields.validate,
+			}
+			args := tt.args()
+			got, err := s.SendRawEmail(args.ctx, args.request)
+			if !tt.wantErr(t, err, fmt.Sprintf("SendRawEmail(%v, %v)", args.ctx, args.request)) {
+				return
+			}
+			assert.Equalf(t, tt.want, got, "SendRawEmail(%v, %v)", args.ctx, args.request)
+		})
+	}
 }
