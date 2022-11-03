@@ -7,8 +7,9 @@ type TypeEmail string
 const (
 	CHARSET = "UTF-8"
 
-	HTMLTypeEmail = TypeEmail("html")
-	TEXTTypeEmail = TypeEmail("text")
+	HTMLTypeEmail  = TypeEmail("html")
+	TEXTTypeEmail  = TypeEmail("text")
+	MaxMessageSize = 10485760
 )
 
 type RequestSendEmail struct {
