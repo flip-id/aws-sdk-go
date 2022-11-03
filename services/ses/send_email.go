@@ -3,10 +3,16 @@ package ses
 import (
 	"bytes"
 	"context"
+	"errors"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	"github.com/wneessen/go-mail"
+)
+
+var (
+	ErrorMaxEmailSize = errors.New("email size exceed limit")
 )
 
 func (s *Service) SendEmail(ctx context.Context, request RequestSendEmail) (string, error) {
@@ -49,7 +55,7 @@ func (s *Service) SendEmail(ctx context.Context, request RequestSendEmail) (stri
 	return *response.MessageId, nil
 }
 
-func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail) (string, error) {
+func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail) (messageID string, err error) {
 	if err := s.validate.Struct(request); err != nil {
 		return "", err
 	}
@@ -61,19 +67,19 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 		m.SetBodyString(mail.TypeTextPlain, request.Body)
 	}
 
-	err := m.To(request.To...)
+	err = m.To(request.To...)
 	if err != nil {
-		return "", err
+		return
 	}
 
 	err = m.Cc(request.Cc...)
 	if err != nil {
-		return "", err
+		return
 	}
 
 	err = m.Bcc(request.Bcc...)
 	if err != nil {
-		return "", err
+		return
 	}
 
 	for _, a := range request.AttachmentPaths {
@@ -86,9 +92,14 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 
 	m.Subject(request.Subject)
 	var buff = new(bytes.Buffer)
-	_, err = m.WriteTo(buff)
+	size, err := m.WriteTo(buff)
 	if err != nil {
-		return "", err
+		return
+	}
+
+	if size > MaxMessageSize {
+		err = ErrorMaxEmailSize
+		return
 	}
 
 	response, err := s.SESService.SendRawEmail(ctx, &ses.SendRawEmailInput{
@@ -102,8 +113,9 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 		Source: aws.String(request.From),
 	})
 	if err != nil {
-		return "", err
+		return
 	}
+	buff.Reset()
 
 	return *response.MessageId, nil
 }
