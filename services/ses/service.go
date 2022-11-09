@@ -2,6 +2,7 @@ package ses
 
 import (
 	"context"
+
 	"github.com/go-playground/validator"
 
 	awsses "github.com/flip-id/aws-sdk-go/aws/ses"
@@ -17,11 +18,23 @@ type ServiceInterface interface {
 }
 
 type Service struct {
+	UserAgent  string
 	SESService awsses.SESServiceInterface
 	validate   *validator.Validate
 }
 
-func New(ctx context.Context, region client.Region, options ...func(*ses.Options)) (ServiceInterface, error) {
+func New(ctx context.Context, serviceOption *ServiceOption, options ...func(*ses.Options)) (ServiceInterface, error) {
+	var (
+		region    string
+		userAgent string
+	)
+
+	if serviceOption.Region != "" {
+		region = serviceOption.Region
+	}
+	if serviceOption.ServiceCode != "" {
+		userAgent = serviceOption.ServiceCode
+	}
 
 	clientConfig, err := client.New(ctx, config.WithRegion(string(region)))
 	if err != nil {
@@ -29,5 +42,9 @@ func New(ctx context.Context, region client.Region, options ...func(*ses.Options
 	}
 
 	sesClient := ses.NewFromConfig(clientConfig.Config, options...)
-	return &Service{SESService: awsses.NewSES(sesClient), validate: validator.New()}, nil
+	return &Service{
+		UserAgent:  userAgent,
+		SESService: awsses.NewSES(sesClient),
+		validate:   validator.New(),
+	}, nil
 }

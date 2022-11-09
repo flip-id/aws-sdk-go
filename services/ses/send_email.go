@@ -66,6 +66,8 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	} else if request.Type == TEXTTypeEmail {
 		m.SetBodyString(mail.TypeTextPlain, request.Body)
 	}
+	m.FromFormat(request.FromName, request.From)
+	m.SetUserAgent(s.UserAgent)
 
 	err = m.To(request.To...)
 	if err != nil {
