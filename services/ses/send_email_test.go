@@ -254,7 +254,7 @@ func TestService_SendRawEmail(t *testing.T) {
 					ctx: context.TODO(),
 					request: RequestSendRawEmail{
 						RequestSendEmail: RequestSendEmail{
-							To:      []string{"hello@test.id"},
+							To:      []string{"muhammad.asqolani@flip.id"},
 							Cc:      []string{"hello-cc@test.id"},
 							Bcc:     []string{"hello-bcc@test.id"},
 							From:    "no-reply@test.id",
