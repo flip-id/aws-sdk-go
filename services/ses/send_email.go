@@ -61,6 +61,11 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	}
 
 	m := mail.NewMsg()
+	err = m.SetAddrHeader("Return-Path:muhammad.asqolani@flip.id")
+	if err != nil {
+		return
+	}
+
 	if request.Type == HTMLTypeEmail {
 		m.SetBodyString(mail.TypeTextHTML, request.Body)
 	} else if request.Type == TEXTTypeEmail {
