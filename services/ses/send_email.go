@@ -68,6 +68,7 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	}
 	m.FromFormat(request.FromName, request.From)
 	m.SetUserAgent(s.UserAgent)
+	m.SetHeader("Return-Path", request.From)
 
 	err = m.To(request.To...)
 	if err != nil {
