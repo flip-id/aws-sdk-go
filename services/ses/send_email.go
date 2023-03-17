@@ -11,6 +11,10 @@ import (
 	"github.com/wneessen/go-mail"
 )
 
+const (
+	HeaderReturnPath = "Return-Path"
+)
+
 var (
 	ErrorMaxEmailSize = errors.New("email size exceed limit")
 )
@@ -68,7 +72,11 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	}
 	m.FromFormat(request.FromName, request.From)
 	m.SetUserAgent(s.UserAgent)
-	m.SetHeader("Return-Path", request.From)
+	returnPath := request.From
+	if request.ReturnPath != "" {
+		returnPath = request.ReturnPath
+	}
+	m.SetHeader(HeaderReturnPath, returnPath)
 
 	err = m.To(request.To...)
 	if err != nil {
