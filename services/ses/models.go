@@ -13,14 +13,15 @@ const (
 )
 
 type RequestSendEmail struct {
-	To       []string `validate:"min=1,dive,email"`
-	Cc       []string `validate:"dive,email"`
-	Bcc      []string `validate:"dive,email"`
-	From     string   `validate:"required"`
-	FromName string
-	Subject  string `validate:"required"`
-	Body     string `validate:"required"`
-	Type     TypeEmail
+	To         []string `validate:"min=1,dive,email"`
+	Cc         []string `validate:"dive,email"`
+	Bcc        []string `validate:"dive,email"`
+	From       string   `validate:"required"`
+	FromName   string
+	Subject    string `validate:"required"`
+	Body       string `validate:"required"`
+	Type       TypeEmail
+	ReturnPath string
 }
 
 // RequestSendRawEmail is a request to send raw email.
