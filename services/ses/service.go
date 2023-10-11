@@ -36,7 +36,7 @@ func New(ctx context.Context, serviceOption *ServiceOption, options ...func(*ses
 		userAgent = serviceOption.ServiceCode
 	}
 
-	clientConfig, err := client.New(ctx, config.WithRegion(string(region)))
+	clientConfig, err := client.New(ctx, config.WithRegion(string(region)), config.WithHTTPClient(serviceOption.Client))
 	if err != nil {
 		return nil, err
 	}
