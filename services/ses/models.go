@@ -1,6 +1,9 @@
 package ses
 
-import "io"
+import (
+	"github.com/aws/aws-sdk-go-v2/service/ses"
+	"io"
+)
 
 type TypeEmail string
 
@@ -40,4 +43,5 @@ type AttachmentReader struct {
 type ServiceOption struct {
 	Region      string
 	ServiceCode string
+	Client      ses.HTTPClient
 }
