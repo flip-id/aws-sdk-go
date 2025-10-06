@@ -3,8 +3,6 @@ package ses
 import (
 	"bytes"
 	"context"
-	"errors"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
@@ -13,10 +11,6 @@ import (
 
 const (
 	HeaderReturnPath = "Return-Path"
-)
-
-var (
-	ErrorMaxEmailSize = errors.New("email size exceed limit")
 )
 
 func (s *Service) SendEmail(ctx context.Context, request RequestSendEmail) (string, error) {
@@ -103,15 +97,6 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 
 	m.Subject(request.Subject)
 	var buff = new(bytes.Buffer)
-	size, err := m.WriteTo(buff)
-	if err != nil {
-		return
-	}
-
-	if size > MaxMessageSize {
-		err = ErrorMaxEmailSize
-		return
-	}
 
 	response, err := s.SESService.SendRawEmail(ctx, &ses.SendRawEmailInput{
 		RawMessage: &types.RawMessage{

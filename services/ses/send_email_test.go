@@ -275,54 +275,6 @@ func TestService_SendRawEmail(t *testing.T) {
 			want:    "5123",
 			wantErr: assert.NoError,
 		},
-		{
-			name: "error sending text email with attachments exceed limit",
-			fields: func() fields {
-				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
-				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
-					Return(&ses.SendRawEmailOutput{
-						MessageId: aws.String("5123"),
-					}, nil)
-				return fields{
-					SESService: mockSESService,
-					validate:   validator.New(),
-				}
-			},
-			args: func() args {
-				filePathTest := "./Brosur.pdf"
-				if _, err := os.Stat(filePathTest); errors.Is(err, os.ErrNotExist) {
-					filePathTest = "./services/ses/Brosur.pdf"
-					_, err := os.Stat(filePathTest)
-					if err != nil {
-						t.Errorf("Error checking file for testing: %v", err)
-					}
-				}
-				buff := strings.NewReader(`hello world!`)
-				return args{
-					ctx: context.TODO(),
-					request: RequestSendRawEmail{
-						RequestSendEmail: RequestSendEmail{
-							To:      []string{"hello@test.id"},
-							Cc:      []string{"hello-cc@test.id"},
-							Bcc:     []string{"hello-bcc@test.id"},
-							From:    "no-reply@test.id",
-							Subject: "Test",
-							Body:    "Test",
-							Type:    TEXTTypeEmail,
-						},
-						AttachmentPaths: []string{filePathTest},
-						AttachmentReaders: []AttachmentReader{
-							{
-								Name:   "brosur-glamping.pdf",
-								Reader: buff,
-							},
-						},
-					},
-				}
-			},
-			want:    "",
-			wantErr: assert.Error,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
