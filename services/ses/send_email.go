@@ -3,6 +3,7 @@ package ses
 import (
 	"bytes"
 	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
@@ -98,6 +99,12 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	m.Subject(request.Subject)
 	var buff = new(bytes.Buffer)
 
+	// Write the email message to the buffer
+	_, err = m.WriteTo(buff)
+	if err != nil {
+		return "", err
+	}
+
 	response, err := s.SESService.SendRawEmail(ctx, &ses.SendRawEmailInput{
 		RawMessage: &types.RawMessage{
 			Data: buff.Bytes(),
@@ -111,7 +118,6 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 	if err != nil {
 		return
 	}
-	buff.Reset()
 
 	return *response.MessageId, nil
 }
