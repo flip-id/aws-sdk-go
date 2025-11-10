@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	ses "github.com/aws/aws-sdk-go-v2/service/ses"
+	sesv2 "github.com/aws/aws-sdk-go-v2/service/sesv2"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -53,6 +54,26 @@ func (mr *MockSESServiceInterfaceMockRecorder) SendEmail(ctx, params interface{}
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEmail", reflect.TypeOf((*MockSESServiceInterface)(nil).SendEmail), varargs...)
+}
+
+// SendEmailV2 mocks base method.
+func (m *MockSESServiceInterface) SendEmailV2(ctx context.Context, params *sesv2.SendEmailInput, optFns ...func(*sesv2.Options)) (*sesv2.SendEmailOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SendEmailV2", varargs...)
+	ret0, _ := ret[0].(*sesv2.SendEmailOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendEmailV2 indicates an expected call of SendEmailV2.
+func (mr *MockSESServiceInterfaceMockRecorder) SendEmailV2(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEmailV2", reflect.TypeOf((*MockSESServiceInterface)(nil).SendEmailV2), varargs...)
 }
 
 // SendRawEmail mocks base method.

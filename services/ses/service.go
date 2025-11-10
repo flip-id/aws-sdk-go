@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 )
 
 type ServiceInterface interface {
@@ -41,10 +42,15 @@ func New(ctx context.Context, serviceOption *ServiceOption, options ...func(*ses
 		return nil, err
 	}
 
+	// Create SES v1 client (kept for backward compatibility, but not used anymore)
 	sesClient := ses.NewFromConfig(clientConfig.Config, options...)
+
+	// Create SES v2 client for both SendEmail and SendRawEmail (40MB support)
+	sesClientV2 := sesv2.NewFromConfig(clientConfig.Config)
+
 	return &Service{
 		UserAgent:  userAgent,
-		SESService: awsses.NewSES(sesClient),
+		SESService: awsses.NewSESWithBoth(sesClient, sesClientV2),
 		validate:   validator.New(),
 	}, nil
 }
