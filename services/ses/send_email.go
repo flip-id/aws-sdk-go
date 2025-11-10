@@ -3,11 +3,10 @@ package ses
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/ses"
-	"github.com/aws/aws-sdk-go-v2/service/ses/types"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
+	sesv2types "github.com/aws/aws-sdk-go-v2/service/sesv2/types"
 	"github.com/wneessen/go-mail"
 )
 
@@ -15,41 +14,40 @@ const (
 	HeaderReturnPath = "Return-Path"
 )
 
-var (
-	ErrorMaxEmailSize = errors.New("email size exceed limit")
-)
-
 func (s *Service) SendEmail(ctx context.Context, request RequestSendEmail) (string, error) {
 	if err := s.validate.Struct(request); err != nil {
 		return "", err
 	}
 
-	bodyEmail := &types.Body{}
+	bodyEmail := &sesv2types.Body{}
 	if request.Type == HTMLTypeEmail {
-		bodyEmail.Html = &types.Content{
+		bodyEmail.Html = &sesv2types.Content{
 			Charset: aws.String(CHARSET),
 			Data:    aws.String(request.Body),
 		}
 	} else if request.Type == TEXTTypeEmail {
-		bodyEmail.Text = &types.Content{
+		bodyEmail.Text = &sesv2types.Content{
 			Charset: aws.String(CHARSET),
 			Data:    aws.String(request.Body),
 		}
 	}
 
-	response, err := s.SESService.SendEmail(ctx, &ses.SendEmailInput{
-		Source: aws.String(request.From),
-		Destination: &types.Destination{
+	// Use SES v2 API for better support and consistency
+	response, err := s.SESService.SendEmailV2(ctx, &sesv2.SendEmailInput{
+		FromEmailAddress: aws.String(request.From),
+		Destination: &sesv2types.Destination{
 			ToAddresses:  request.To,
 			CcAddresses:  request.Cc,
 			BccAddresses: request.Bcc,
 		},
-		Message: &types.Message{
-			Subject: &types.Content{
-				Charset: aws.String(CHARSET),
-				Data:    aws.String(request.Subject),
+		Content: &sesv2types.EmailContent{
+			Simple: &sesv2types.Message{
+				Subject: &sesv2types.Content{
+					Charset: aws.String(CHARSET),
+					Data:    aws.String(request.Subject),
+				},
+				Body: bodyEmail,
 			},
-			Body: bodyEmail,
 		},
 	})
 	if err != nil {
@@ -103,30 +101,30 @@ func (s *Service) SendRawEmail(ctx context.Context, request RequestSendRawEmail)
 
 	m.Subject(request.Subject)
 	var buff = new(bytes.Buffer)
-	size, err := m.WriteTo(buff)
+
+	// Write the email message to the buffer
+	_, err = m.WriteTo(buff)
 	if err != nil {
-		return
+		return "", err
 	}
 
-	if size > MaxMessageSize {
-		err = ErrorMaxEmailSize
-		return
-	}
-
-	response, err := s.SESService.SendRawEmail(ctx, &ses.SendRawEmailInput{
-		RawMessage: &types.RawMessage{
-			Data: buff.Bytes(),
+	// Use SES v2 API for 40MB attachment support
+	response, err := s.SESService.SendEmailV2(ctx, &sesv2.SendEmailInput{
+		FromEmailAddress: aws.String(request.From),
+		Content: &sesv2types.EmailContent{
+			Raw: &sesv2types.RawMessage{
+				Data: buff.Bytes(),
+			},
 		},
-		Destinations: append(
-			request.To,
-			append(request.Cc, request.Bcc...)...,
-		),
-		Source: aws.String(request.From),
+		Destination: &sesv2types.Destination{
+			ToAddresses:  request.To,
+			CcAddresses:  request.Cc,
+			BccAddresses: request.Bcc,
+		},
 	})
 	if err != nil {
 		return
 	}
-	buff.Reset()
 
 	return *response.MessageId, nil
 }

@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/go-playground/validator"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/go-playground/validator"
+
 	awsSes "github.com/flip-id/aws-sdk-go/aws/ses"
 
-	"github.com/aws/aws-sdk-go-v2/service/ses"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestSendEmail(t *testing.T) {
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
-					"response": &ses.SendEmailOutput{MessageId: &messageID},
+					"response": &sesv2.SendEmailOutput{MessageId: &messageID},
 					"error":    nil,
 					"times":    1,
 				},
@@ -63,7 +64,7 @@ func TestSendEmail(t *testing.T) {
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
-					"response": &ses.SendEmailOutput{MessageId: &messageID},
+					"response": &sesv2.SendEmailOutput{MessageId: &messageID},
 					"error":    nil,
 					"times":    1,
 				},
@@ -81,7 +82,7 @@ func TestSendEmail(t *testing.T) {
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
-					"response": &ses.SendEmailOutput{MessageId: &messageID},
+					"response": &sesv2.SendEmailOutput{MessageId: &messageID},
 					"error":    nil,
 					"times":    0,
 				},
@@ -99,7 +100,7 @@ func TestSendEmail(t *testing.T) {
 			},
 			mockings: mocking{
 				sendEmail: map[string]interface{}{
-					"response": &ses.SendEmailOutput{MessageId: &messageID},
+					"response": &sesv2.SendEmailOutput{MessageId: &messageID},
 					"error":    errors.New("something wrong"),
 					"times":    1,
 				},
@@ -113,7 +114,7 @@ func TestSendEmail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			mockingSESService := awsSes.NewMockSESServiceInterface(ctrl)
-			mockingSESService.EXPECT().SendEmail(gomock.Any(), gomock.Any()).Return(
+			mockingSESService.EXPECT().SendEmailV2(gomock.Any(), gomock.Any()).Return(
 				tc.mockings.sendEmail["response"], tc.mockings.sendEmail["error"]).Times(tc.mockings.sendEmail["times"].(int))
 
 			sesService := Service{
@@ -175,7 +176,7 @@ func TestService_SendRawEmail(t *testing.T) {
 			name: "error sending text email",
 			fields: func() fields {
 				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
-				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
+				mockSESService.EXPECT().SendEmailV2(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("error sending text email"))
 				return fields{
 					SESService: mockSESService,
@@ -203,7 +204,7 @@ func TestService_SendRawEmail(t *testing.T) {
 			name: "error sending html email",
 			fields: func() fields {
 				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
-				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
+				mockSESService.EXPECT().SendEmailV2(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("error sending html email"))
 				return fields{
 					SESService: mockSESService,
@@ -231,8 +232,8 @@ func TestService_SendRawEmail(t *testing.T) {
 			name: "success sending text email with attachments",
 			fields: func() fields {
 				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
-				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
-					Return(&ses.SendRawEmailOutput{
+				mockSESService.EXPECT().SendEmailV2(gomock.Any(), gomock.Any()).
+					Return(&sesv2.SendEmailOutput{
 						MessageId: aws.String("5123"),
 					}, nil)
 				return fields{
@@ -274,54 +275,6 @@ func TestService_SendRawEmail(t *testing.T) {
 			},
 			want:    "5123",
 			wantErr: assert.NoError,
-		},
-		{
-			name: "error sending text email with attachments exceed limit",
-			fields: func() fields {
-				mockSESService := awsSes.NewMockSESServiceInterface(ctrl)
-				mockSESService.EXPECT().SendRawEmail(gomock.Any(), gomock.Any()).
-					Return(&ses.SendRawEmailOutput{
-						MessageId: aws.String("5123"),
-					}, nil)
-				return fields{
-					SESService: mockSESService,
-					validate:   validator.New(),
-				}
-			},
-			args: func() args {
-				filePathTest := "./Brosur.pdf"
-				if _, err := os.Stat(filePathTest); errors.Is(err, os.ErrNotExist) {
-					filePathTest = "./services/ses/Brosur.pdf"
-					_, err := os.Stat(filePathTest)
-					if err != nil {
-						t.Errorf("Error checking file for testing: %v", err)
-					}
-				}
-				buff := strings.NewReader(`hello world!`)
-				return args{
-					ctx: context.TODO(),
-					request: RequestSendRawEmail{
-						RequestSendEmail: RequestSendEmail{
-							To:      []string{"hello@test.id"},
-							Cc:      []string{"hello-cc@test.id"},
-							Bcc:     []string{"hello-bcc@test.id"},
-							From:    "no-reply@test.id",
-							Subject: "Test",
-							Body:    "Test",
-							Type:    TEXTTypeEmail,
-						},
-						AttachmentPaths: []string{filePathTest},
-						AttachmentReaders: []AttachmentReader{
-							{
-								Name:   "brosur-glamping.pdf",
-								Reader: buff,
-							},
-						},
-					},
-				}
-			},
-			want:    "",
-			wantErr: assert.Error,
 		},
 	}
 	for _, tt := range tests {
